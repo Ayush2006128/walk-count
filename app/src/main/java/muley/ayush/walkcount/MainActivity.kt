@@ -11,16 +11,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -36,13 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import muley.ayush.walkcount.data.UserPreferencesRepository
+import muley.ayush.walkcount.ui.composables.StepCounter
 import muley.ayush.walkcount.ui.theme.WalkCountTheme
 
 class MainActivity : ComponentActivity() {
@@ -50,12 +51,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             WalkCountTheme {
-                MainScreen(viewModel = viewModel())
-                }
+                val userPreferencesRepository = UserPreferencesRepository(this)
+                val mainViewModel: MainViewModel = viewModel(
+                    factory = MainViewModelFactory(userPreferencesRepository)
+                )
+                MainScreen(viewModel = mainViewModel)
             }
         }
     }
-
+}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val steps by viewModel.steps.collectAsState()
+    val stepGoal by viewModel.stepGoal.collectAsState()
 
     // Define the permissions we need
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -105,7 +110,12 @@ fun MainScreen(viewModel: MainViewModel) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { context.startActivity(Intent(context, GoalsActivity::class.java)) }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -116,7 +126,7 @@ fun MainScreen(viewModel: MainViewModel) {
             color = MaterialTheme.colorScheme.background
         ) {
             if (hasPermissions) {
-                WalkCountDisplay(steps = steps, goal = 10000)
+                StepCounter(steps = steps, goal = stepGoal)
             } else {
                 PermissionRequestUI(
                     onGrantClick = {
@@ -125,65 +135,6 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
             }
         }
-    }
-}
-
-@Composable
-fun WalkCountDisplay(steps: Int, goal: Int) {
-    // Calculate progress from 0.0 to 1.0
-    val progress = (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Steps Today",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // This Box overlays the text on top of the progress indicator
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(250.dp)) {
-            // Background track for the progress
-            CircularProgressIndicator(
-                progress = { 1f }, // Full circle
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                strokeWidth = 20.dp,
-                strokeCap = StrokeCap.Round
-            )
-
-            // The actual progress
-            CircularProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.primary,
-                strokeWidth = 20.dp,
-                strokeCap = StrokeCap.Round
-            )
-
-            // The step count text
-            Text(
-                text = "$steps",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold
-                ),
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Goal: $goal",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -220,6 +171,6 @@ private fun startWalkCountService(context: Context) {
 @Composable
 fun DefaultPreview() {
     WalkCountTheme {
-        WalkCountDisplay(steps = 5432, goal = 10000)
+        StepCounter(steps = 5432, goal = 10000)
     }
 }

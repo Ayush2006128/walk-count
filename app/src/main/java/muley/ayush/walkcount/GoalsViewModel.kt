@@ -5,15 +5,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import muley.ayush.walkcount.data.UserPreferencesRepository
 
-/**
- * The ViewModel for the main screen.
- * It exposes the step count and step goal from the repositories as StateFlows
- * so the Compose UI can observe them.
- */
-class MainViewModel(userPreferencesRepository: UserPreferencesRepository) : ViewModel() {
-    val steps: StateFlow<Int> = WalkCountRepository.steps
+class GoalsViewModel(private val userPreferencesRepository: UserPreferencesRepository) : ViewModel() {
 
     val stepGoal: StateFlow<Int> = userPreferencesRepository.stepGoal
         .stateIn(
@@ -21,4 +16,10 @@ class MainViewModel(userPreferencesRepository: UserPreferencesRepository) : View
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = 10000
         )
+
+    fun saveStepGoal(stepGoal: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.saveStepGoal(stepGoal)
+        }
+    }
 }
