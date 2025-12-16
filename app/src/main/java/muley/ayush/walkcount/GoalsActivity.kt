@@ -55,7 +55,10 @@ fun GoalsScreen(viewModel: GoalsViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Set Your Goal") }
+                title = { Text("Set Your Goal") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                )
             )
         }
     ) {
